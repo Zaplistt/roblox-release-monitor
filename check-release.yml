@@ -1,0 +1,32 @@
+name: Check Roblox game release
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: roblox-release-check
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Check playability and notify Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python3 monitor.py
+      - name: Persist sent status
+        run: |
+          if [ -f release_state.json ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add release_state.json
+            if ! git diff --cached --quiet; then
+              git commit -m 'Record Roblox release notification'
+              git push
+            fi
+          fi
